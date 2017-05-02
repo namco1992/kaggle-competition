@@ -25,7 +25,8 @@ from sklearn.metrics import fbeta_score
 import time
 
 
-_BATCH = 32
+_BATCH_SIZE = 32
+_EPOCH = 50
 _IMG_SIZE = (64, 64)
 _INPUT_SHAPE = (64, 64, 3)
 _NUM_OF_CLASSES = 17
@@ -174,7 +175,7 @@ def train(x_train, y_train, x_test, load_weights=False):
 
         history = model.fit(
             x=X_train, y=Y_train, validation_data=(X_valid, Y_valid),
-            batch_size=_BATCH, verbose=2, epochs=50, callbacks=callbacks,
+            batch_size=_BATCH_SIZE, verbose=2, epochs=_EPOCH, callbacks=callbacks,
             shuffle=True)
         historys.append(history.history)
 
