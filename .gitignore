@@ -1,0 +1,4 @@
+*.h5
+input/
+*.pyc
+.ipynb_checkpoints/
