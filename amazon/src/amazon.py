@@ -222,45 +222,6 @@ def evaluate(y_true, y_pred, metrics='fbeta_score'):
     return fbeta_scores_dict
 
 
-# import matplotlib.pyplot as plt
-
-# plot_num = len(historys)
-# for i in range(plot_num):
-#     history_dict = historys[i].history
-
-#     # history_dict = history.history
-#     loss_values = history_dict['loss']
-#     val_loss_values = history_dict['val_loss']
-#     epochs = range(1, len(loss_values) + 1)
-#     plt.subplot(plot_num, 1, i + 1)
-#     # "bo" is for "blue dot"
-#     plt.plot(epochs, loss_values, 'bo')
-#     # b+ is for "blue crosses"
-#     plt.plot(epochs, val_loss_values, 'b+')
-#     plt.xlabel('Epochs')
-#     plt.ylabel('Loss')
-
-#     plt.show()
-
-
-# # In[ ]:
-
-# for i in range(plot_num):
-#     history_dict = historys[i].history
-#     acc_values = history_dict['acc']
-#     val_acc_values = history_dict['val_acc']
-# #     logging.info(acc_values)
-#     epochs = range(1, len(loss_values) + 1)
-
-#     plt.subplot(plot_num, 1, i+1)
-
-#     plt.plot(epochs, acc_values, 'bo')
-#     plt.plot(epochs, val_acc_values, 'b+')
-#     plt.xlabel('Epochs')
-#     plt.ylabel('Accuracy')
-
-#     plt.show()
-
 if __name__ == '__main__':
     x_train, y_train, x_test = load_datasets()
     train(x_train, y_train, x_test)
