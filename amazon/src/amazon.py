@@ -32,7 +32,7 @@ _IMG_SIZE = (64, 64)
 _INPUT_SHAPE = (64, 64, 3)
 _NUM_OF_CLASSES = 17
 _NFOLDS = 5
-_TRAIN_PATH = '../input/train-jpg-sharpen/{}.jpg'
+_TRAIN_PATH = '../input/train-jpg/{}.jpg'
 _TEST_PATH = '../input/test-jpg-sharpen/{}.jpg'
 _LABELS = [
     'haze',
@@ -73,7 +73,7 @@ def load_datasets():
     y_train = []
 
     label_map, inv_label_map = init_labels()
-    for f, tags in tqdm(df_train.values, miniters=1000, ascii=True):
+    for f, tags in tqdm(df_train.values[:10000], miniters=1000, ascii=True):
         img = cv2.imread(_TRAIN_PATH.format(f))
         targets = np.zeros(17)
         for t in tags.split(' '):
