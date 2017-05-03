@@ -7,6 +7,7 @@ import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os
 import json
+import logging
 
 import cv2
 
@@ -31,6 +32,8 @@ _IMG_SIZE = (64, 64)
 _INPUT_SHAPE = (64, 64, 3)
 _NUM_OF_CLASSES = 17
 _NFOLDS = 5
+_TRAIN_PATH = '../input/train-jpg-sharpen/{}.jpg'
+_TEST_PATH = '../input/test-jpg-sharpen/{}.jpg'
 _LABELS = [
     'haze',
     'artisinal_mine',
@@ -71,23 +74,23 @@ def load_datasets():
 
     label_map, inv_label_map = init_labels()
     for f, tags in tqdm(df_train.values, miniters=1000, ascii=True):
-        img = cv2.imread('../input/train-jpg/{}.jpg'.format(f))
+        img = cv2.imread(_TRAIN_PATH.format(f))
         targets = np.zeros(17)
         for t in tags.split(' '):
             targets[label_map[t]] = 1
         x_train.append(cv2.resize(img, _IMG_SIZE))
         y_train.append(targets)
 
-    for f, tags in tqdm(df_test.values, miniters=1000, ascii=True):
-        img = cv2.imread('../input/test-jpg/{}.jpg'.format(f))
-        x_test.append(cv2.resize(img, _IMG_SIZE))
+    # for f, tags in tqdm(df_test.values, miniters=1000, ascii=True):
+    #     img = cv2.imread(_TEST_PATH.format(f))
+    #     x_test.append(cv2.resize(img, _IMG_SIZE))
 
     y_train = np.array(y_train, np.uint8)
     x_train = np.array(x_train, np.float32) / 255.
-    x_test = np.array(x_test, np.float32) / 255.
+    # x_test = np.array(x_test, np.float32) / 255.
 
-    print(x_train.shape)
-    print(y_train.shape)
+    logging.info(x_train.shape)
+    logging.info(y_train.shape)
 
     return x_train, y_train, x_test
 
@@ -139,7 +142,7 @@ def load_model(weights_path=None):
 
 # In[11]:
 
-def train(x_train, y_train, x_test, load_weights=False):
+def train(x_train, y_train, x_test=None, load_weights=False):
     num_fold = 0
     # sum_score = 0
     # yfull_test = []
@@ -151,16 +154,16 @@ def train(x_train, y_train, x_test, load_weights=False):
 
     for train_index, test_index in kf:
         start_time_model_fitting = time.time()
-        # print(train_index, test_index)
+        # logging.info(train_index, test_index)
         X_train = x_train[train_index]
         Y_train = y_train[train_index]
         X_valid = x_train[test_index]
         Y_valid = y_train[test_index]
 
         num_fold += 1
-        print('Start KFold number {} from {}'.format(num_fold, _NFOLDS))
-        print('Split train: ', len(X_train), len(Y_train))
-        print('Split valid: ', len(X_valid), len(Y_valid))
+        logging.info('Start KFold number {} from {}'.format(num_fold, _NFOLDS))
+        logging.info('Split train: ', len(X_train), len(Y_train))
+        logging.info('Split valid: ', len(X_valid), len(Y_valid))
 
         kfold_weights_path = os.path.join('', 'weights_kfold_' + str(num_fold) + '.h5')
         if load_weights is True:
@@ -175,7 +178,7 @@ def train(x_train, y_train, x_test, load_weights=False):
 
         history = model.fit(
             x=X_train, y=Y_train, validation_data=(X_valid, Y_valid),
-            batch_size=_BATCH_SIZE, verbose=2, epochs=_EPOCH, callbacks=callbacks,
+            batch_size=_BATCH_SIZE, epochs=_EPOCH, callbacks=callbacks,
             shuffle=True)
         historys.append(history.history)
 
@@ -212,7 +215,7 @@ def predict(model, x, batch_size=128, verbose=2):
 
 def evaluate(y_true, y_pred, metrics='fbeta_score'):
     fbeta_scores_dict = {}
-    for i in range(5, 20):
+    for i in range(1, 15):
         threshold = (i + 1) / 100.
         score = fbeta_score(y_true, np.array(y_pred) > threshold, beta=2, average='samples')
         fbeta_scores_dict[threshold] = score
@@ -246,7 +249,7 @@ def evaluate(y_true, y_pred, metrics='fbeta_score'):
 #     history_dict = historys[i].history
 #     acc_values = history_dict['acc']
 #     val_acc_values = history_dict['val_acc']
-# #     print(acc_values)
+# #     logging.info(acc_values)
 #     epochs = range(1, len(loss_values) + 1)
 
 #     plt.subplot(plot_num, 1, i+1)
