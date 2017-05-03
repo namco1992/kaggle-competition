@@ -8,32 +8,38 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os
 import json
 import logging
+import time
 
 import cv2
 
 # import tensorflow
 # import keras
+from keras import backend as K
+from keras.preprocessing.image import ImageDataGenerator
+from keras import regularizers
+
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten, Activation
-from keras.layers import Conv2D, MaxPooling2D
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import Dense, Dropout, Flatten, Activation, BatchNormalization
+from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from tqdm import tqdm
 
 from sklearn.cross_validation import train_test_split
 from sklearn.cross_validation import KFold
 from sklearn.metrics import fbeta_score
-import time
 
+from lsuv_init import LSUVinit
 
 _BATCH_SIZE = 32
 _EPOCH = 50
-_IMG_SIZE = (64, 64)
-_INPUT_SHAPE = (64, 64, 3)
+_IMG_SIZE = (128, 128)
+_INPUT_SHAPE = (128, 128, 3)
 _NUM_OF_CLASSES = 17
-_NFOLDS = 5
+_NFOLDS = 10
+_BN_AXIS = 3
 _TRAIN_PATH = '../input/train-jpg/{}.jpg'
-_TEST_PATH = '../input/test-jpg-sharpen/{}.jpg'
+_TEST_PATH = '../input/test-jpg/{}.jpg'
 _LABELS = [
     'haze',
     'artisinal_mine',
@@ -73,7 +79,7 @@ def load_datasets():
     y_train = []
 
     label_map, inv_label_map = init_labels()
-    for f, tags in tqdm(df_train.values[:10000], miniters=1000, ascii=True):
+    for f, tags in tqdm(df_train.values, miniters=1000, ascii=True):
         img = cv2.imread(_TRAIN_PATH.format(f))
         targets = np.zeros(17)
         for t in tags.split(' '):
@@ -98,37 +104,59 @@ def load_datasets():
 def load_model(weights_path=None):
     model = Sequential()
 
-#     model.add(Conv2D(32, 3, 3, activation='relu', input_shape=(48, 48, 3)))
-#     model.add(MaxPooling2D(pool_size=(2, 2)))
-#     model.add(Conv2D(48, 3, 3, activation='relu'))
-#     model.add(MaxPooling2D(pool_size=(2, 2)))
-#     model.add(Dropout(0.25))
-#     model.add(Conv2D(64, 3, 3, activation='relu'))
-#     model.add(MaxPooling2D(pool_size=(2, 2)))
-#     model.add(Dropout(0.25))
-#     model.add(Flatten())
-#     model.add(Dense(128, activation='relu'))
-#     model.add(Dropout(0.5))
-#     model.add(Dense(17, activation='softmax'))
+    # Block 1
+    model.add(Conv2D(64, (3, 3), padding='same', input_shape=_INPUT_SHAPE, name='block1_conv1'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block1_bn1'))
+    model.add(Activation('relu'))
 
-    model.add(Conv2D(32, (3, 3), padding='same', input_shape=_INPUT_SHAPE))
+    model.add(Conv2D(64, (3, 3), name='block1_conv2'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block1_bn2'))
     model.add(Activation('relu'))
-    model.add(Conv2D(32, (3, 3)))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
 
-    model.add(Conv2D(64, (3, 3), padding='same'))
+    model.add(Conv2D(128, (3, 3), name='block1_conv3'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block1_bn3'))
     model.add(Activation('relu'))
-    model.add(Conv2D(64, (3, 3)))
-    model.add(Activation('relu'))
+
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
+    model.add(Dropout(0.2))
+
+    # Block 2
+    model.add(Conv2D(64, (3, 3), name='block2_conv1'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block2_bn1'))
+    model.add(Activation('relu'))
+
+    model.add(Conv2D(64, (3, 3), name='block2_conv2', padding='same'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block2_bn2'))
+    model.add(Activation('relu'))
+
+    model.add(Conv2D(128, (3, 3), name='block2_conv3'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block2_bn3'))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.2))
+
+    # Block 3
+    model.add(Conv2D(128, (3, 3), name='block3_conv1'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block3_bn1'))
+    model.add(Activation('relu'))
+
+    model.add(Conv2D(128, (3, 3), name='block3_conv2', padding='same'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block3_bn2'))
+    model.add(Activation('relu'))
+
+    model.add(Conv2D(256, (3, 3), name='block3_conv3'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='block3_bn3'))
+    model.add(Activation('relu'))
+
+    # Top
+    model.add(Conv2D(512, (3, 3), name='top_conv'))
+    model.add(BatchNormalization(axis=_BN_AXIS, name='top_bn'))
+    model.add(Activation('relu'))
+
+    model.add(AveragePooling2D(pool_size=(7, 7), name='avg_pool_top'))
 
     model.add(Flatten())
-    model.add(Dense(512))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
     model.add(Dense(_NUM_OF_CLASSES))
     model.add(Activation('softmax'))
 
@@ -165,21 +193,41 @@ def train(x_train, y_train, x_test=None, load_weights=False):
         logging.info('Split train: ', len(X_train), len(Y_train))
         logging.info('Split valid: ', len(X_valid), len(Y_valid))
 
-        kfold_weights_path = os.path.join('', 'weights_kfold_' + str(num_fold) + '.h5')
+        kfold_weights_path = os.path.join('test2/', 'weights_kfold_' + str(num_fold) + '.h5')
         if load_weights is True:
             model = load_model(kfold_weights_path)
         else:
             model = load_model()
 
+        # LSUV init
+        model = LSUVinit(model, X_train[:_BATCH_SIZE,:,:,:])
+
         callbacks = [
-            EarlyStopping(monitor='val_loss', patience=2, verbose=0),
+            ReduceLROnPlateau(monitor='val_loss', patience=3),
+            TensorBoard(log_dir='./Graph2', histogram_freq=0, write_graph=True, write_images=True),
+            EarlyStopping(monitor='val_loss', patience=5, verbose=0),
             ModelCheckpoint(
                 kfold_weights_path, monitor='val_loss', save_best_only=True, save_weights_only=True, verbose=0)]
 
-        history = model.fit(
-            x=X_train, y=Y_train, validation_data=(X_valid, Y_valid),
-            batch_size=_BATCH_SIZE, epochs=_EPOCH, callbacks=callbacks,
-            shuffle=True)
+        train_datagen = ImageDataGenerator(
+            fill_mode='nearest',
+            data_format=K.image_data_format(),
+            # rescale=1. / 255,
+            zoom_range=0.1,
+            rotation_range=10,
+            width_shift_range=0.05,
+            height_shift_range=0.05,
+            horizontal_flip=True,
+            vertical_flip=True)
+
+        history = model.fit_generator(
+            train_datagen.flow(X_train, Y_train, batch=_BATCH_SIZE),
+            steps_per_epoch=len(X_train) // _BATCH_SIZE,
+            validation_data=(X_valid, Y_valid),
+            batch_size=_BATCH_SIZE,
+            epochs=_EPOCH,
+            callbacks=callbacks
+        )
         historys.append(history.history)
 
         if os.path.isfile(kfold_weights_path):
@@ -215,7 +263,7 @@ def predict(model, x, batch_size=128, verbose=2):
 
 def evaluate(y_true, y_pred, metrics='fbeta_score'):
     fbeta_scores_dict = {}
-    for i in range(1, 15):
+    for i in range(1, 20):
         threshold = (i + 1) / 100.
         score = fbeta_score(y_true, np.array(y_pred) > threshold, beta=2, average='samples')
         fbeta_scores_dict[threshold] = score
