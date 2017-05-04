@@ -33,8 +33,8 @@ from lsuv_init import LSUVinit
 
 _BATCH_SIZE = 32
 _EPOCH = 50
-_IMG_SIZE = (128, 128)
-_INPUT_SHAPE = (128, 128, 3)
+_IMG_SIZE = (64, 64)
+_INPUT_SHAPE = (64, 64, 3)
 _NUM_OF_CLASSES = 17
 _NFOLDS = 10
 _BN_AXIS = 3
@@ -193,19 +193,19 @@ def train(x_train, y_train, x_test=None, load_weights=False):
         logging.info('Split train: ', len(X_train), len(Y_train))
         logging.info('Split valid: ', len(X_valid), len(Y_valid))
 
-        kfold_weights_path = os.path.join('test2/', 'weights_kfold_' + str(num_fold) + '.h5')
-        if load_weights is True:
+        kfold_weights_path = os.path.join('test3/', 'weights_kfold_' + str(num_fold) + '.h5')
+        if load_weights is True and os.path.isfile(kfold_weights_path):
             model = load_model(kfold_weights_path)
+            print('Load {}'.format(kfold_weights_path))
         else:
             model = load_model()
-
-        # LSUV init
-        model = LSUVinit(model, X_train[:_BATCH_SIZE,:,:,:])
+            # LSUV init
+            model = LSUVinit(model, X_train[:_BATCH_SIZE,:,:,:])
 
         callbacks = [
-            ReduceLROnPlateau(monitor='val_loss', patience=3),
+            ReduceLROnPlateau(monitor='val_loss', patience=3, factor=0.5),
             TensorBoard(log_dir='./Graph2', histogram_freq=0, write_graph=True, write_images=True),
-            EarlyStopping(monitor='val_loss', patience=5, verbose=0),
+            EarlyStopping(monitor='val_loss', patience=4, verbose=0),
             ModelCheckpoint(
                 kfold_weights_path, monitor='val_loss', save_best_only=True, save_weights_only=True, verbose=0)]
 
@@ -221,10 +221,9 @@ def train(x_train, y_train, x_test=None, load_weights=False):
             vertical_flip=True)
 
         history = model.fit_generator(
-            train_datagen.flow(X_train, Y_train, batch=_BATCH_SIZE),
-            steps_per_epoch=len(X_train) // _BATCH_SIZE,
+            train_datagen.flow(X_train, Y_train, batch_size=_BATCH_SIZE),
+            steps_per_epoch=X_train.shape[0] // _BATCH_SIZE,
             validation_data=(X_valid, Y_valid),
-            batch_size=_BATCH_SIZE,
             epochs=_EPOCH,
             callbacks=callbacks
         )
@@ -272,4 +271,4 @@ def evaluate(y_true, y_pred, metrics='fbeta_score'):
 
 if __name__ == '__main__':
     x_train, y_train, x_test = load_datasets()
-    train(x_train, y_train, x_test)
+    train(x_train, y_train, x_test, True)
