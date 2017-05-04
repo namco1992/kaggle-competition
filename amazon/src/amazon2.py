@@ -109,11 +109,11 @@ def load_model_BN_after_relu(weights_path=None):
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block1_bn1'))
 
-    model.add(Conv2D(64, (3, 3), name='block1_conv2'))
+    model.add(Conv2D(64, (3, 3), name='block1_conv2', padding='same'))
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block1_bn2'))
 
-    model.add(Conv2D(128, (3, 3), name='block1_conv3'))
+    model.add(Conv2D(128, (3, 3), name='block1_conv3', padding='same'))
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block1_bn3'))
 
@@ -121,7 +121,7 @@ def load_model_BN_after_relu(weights_path=None):
     model.add(Dropout(0.2))
 
     # Block 2
-    model.add(Conv2D(64, (3, 3), name='block2_conv1'))
+    model.add(Conv2D(64, (3, 3), name='block2_conv1', padding='same'))
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block2_bn1'))
 
@@ -129,7 +129,7 @@ def load_model_BN_after_relu(weights_path=None):
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block2_bn2'))
 
-    model.add(Conv2D(128, (3, 3), name='block2_conv3'))
+    model.add(Conv2D(128, (3, 3), name='block2_conv3', padding='same'))
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block2_bn3'))
 
@@ -137,7 +137,7 @@ def load_model_BN_after_relu(weights_path=None):
     model.add(Dropout(0.2))
 
     # Block 3
-    model.add(Conv2D(128, (3, 3), name='block3_conv1'))
+    model.add(Conv2D(128, (3, 3), name='block3_conv1', padding='same'))
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block3_bn1'))
 
@@ -145,12 +145,12 @@ def load_model_BN_after_relu(weights_path=None):
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block3_bn2'))
 
-    model.add(Conv2D(256, (3, 3), name='block3_conv3'))
+    model.add(Conv2D(256, (3, 3), name='block3_conv3', padding='same'))
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='block3_bn3'))
 
     # Top
-    model.add(Conv2D(512, (3, 3), name='top_conv'))
+    model.add(Conv2D(512, (3, 3), name='top_conv', padding='same'))
     model.add(Activation('relu'))
     model.add(BatchNormalization(axis=_BN_AXIS, name='top_bn'))
 
